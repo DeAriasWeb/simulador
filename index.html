@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web Device Studio</title>
+<style>
+:root{--ink:#101116;--panel:#171920;--line:#262a35;--tx:#ebe8e2;--mut:#8b8f9c;--ac:#c5b3ff;--f:"Avenir Next","Segoe UI Variable","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0}
+body{height:100vh;display:grid;grid-template-rows:56px 1fr;background:var(--ink);color:var(--tx);font:14px/1.4 var(--f);overflow:hidden}
+.top{display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--line);background:#12131a}
+.brand{font-weight:650;display:flex;gap:10px;align-items:center;white-space:nowrap}
+.logo{width:18px;height:28px;border-radius:6px;border:2px solid var(--ac);position:relative}
+.logo::after{content:"";position:absolute;left:50%;top:3px;width:6px;height:2px;margin-left:-3px;border-radius:2px;background:var(--ac)}
+.addr{flex:1;max-width:660px;margin:0 auto;display:flex;align-items:center;gap:8px;height:38px;padding:0 4px 0 12px;border:1px solid var(--line);border-radius:999px;background:#0d0e13;color:var(--mut)}
+.addr input{flex:1;background:none;border:0;outline:0;color:var(--tx);font:inherit;min-width:0}
+.addr button{border-radius:999px;padding:6px 14px}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--ac);animation:sp .7s linear infinite;display:none}
+body.busy .spin{display:block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.topr{display:flex;gap:8px}
+button,select{font:inherit;color:var(--tx);background:#20232d;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .18s,border-color .18s,transform .18s}
+button:hover{background:#2a2e3a;border-color:#3d4252}
+button:active{transform:scale(.97)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.pri{background:linear-gradient(135deg,#ddd1ff,#b3a0f5);color:#17142a;border:0;font-weight:650;padding:9px 16px}
+.pri:hover{background:linear-gradient(135deg,#e8deff,#c2b2fa)}
+svg.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.main{display:grid;grid-template-columns:330px 1fr;min-height:0}
+aside{overflow:auto;padding:4px 16px;border-right:1px solid var(--line);background:var(--panel)}
+.c{padding:16px 0;border-bottom:1px solid var(--line)}
+.c:last-child{border:0}
+h3{font-size:13px;font-weight:600;margin-bottom:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+select{width:100%}
+.note{font-size:12px;color:var(--mut);margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chips button{padding:4px 10px;font-size:12px;border-radius:999px}
+.chips .on{background:var(--ac);color:#17142a;border-color:var(--ac)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.th{aspect-ratio:1;border-radius:9px;border:2px solid transparent;padding:0}
+.th.on{border-color:var(--ac)}
+label.s{display:grid;grid-template-columns:72px 1fr 42px;align-items:center;gap:8px;font-size:12px;color:var(--mut);margin:6px 0}
+input[type=range]{accent-color:var(--ac);width:100%}
+#stageWrap{min-width:0;min-height:0;display:grid}
+#stage{position:relative;overflow:hidden;cursor:grab;background:#0d0e12;touch-action:none}
+#bg{position:absolute;inset:-12%;transition:filter .4s,background .4s}
+#pw{position:absolute;inset:0;pointer-events:none}
+#pw.in{animation:in .6s cubic-bezier(.2,.8,.2,1)}
+@keyframes in{from{opacity:0;transform:translateY(18px)}}
+.phone{position:relative;flex:none;transform-style:preserve-3d;backface-visibility:hidden;pointer-events:auto;background:linear-gradient(145deg,#1c1c20,#050505);transition:width .45s cubic-bezier(.3,.8,.3,1),height .45s cubic-bezier(.3,.8,.3,1),border-radius .45s,transform .3s,margin .3s;
+box-shadow:0 0 0 1px rgba(255,255,255,.3),0 0 0 5px var(--m),0 0 0 6px rgba(0,0,0,.55),0 60px 100px -10px rgba(0,0,0,.6),0 25px 45px rgba(0,0,0,.35)}
+.drag #rig,.drag .phone{transition:none}
+.m-both .phone,.m-both .laptop{cursor:grab}
+.drag .phone,.drag .laptop{cursor:grabbing!important}
+.grip{display:none;position:absolute;left:50%;bottom:-34px;width:96px;height:8px;margin-left:-48px;border-radius:99px;background:rgba(255,255,255,.55);box-shadow:0 2px 8px rgba(0,0,0,.45);backface-visibility:hidden}
+.grip::after{content:"";position:absolute;inset:-16px -14px}
+.m-both .grip{display:block}
+.screen{position:absolute;inset:var(--b);overflow:hidden;background:#fff;transition:border-radius .45s}
+iframe{width:calc(100% + var(--sb,0px));height:100%;border:0;background:#fff;display:block}
+.screen.busy::after,.lscreen.busy::after{content:"";position:absolute;top:0;left:0;height:3px;width:40%;z-index:5;background:var(--ac);animation:ld 1s ease-in-out infinite}
+@keyframes ld{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+.ov{position:absolute;inset:0;z-index:2;display:grid;place-content:center;gap:10px;padding:28px;text-align:center;background:linear-gradient(160deg,#f7f5f1,#e7e3dc);color:#23242b;font:15px/1.45 var(--f)}
+.ov.h{display:none}
+.ov b{font-size:19px}
+.ov button{justify-self:center;background:#23242b;color:#fff;border:0}
+.cam{position:absolute;z-index:3;background:#000;pointer-events:none}
+.island{left:50%;top:calc(var(--b) + 11px);width:96px;height:28px;border-radius:20px;transform:translateX(-50%)}
+.notch{left:50%;top:var(--b);width:150px;height:28px;border-radius:0 0 18px 18px;transform:translateX(-50%)}
+.punch{left:50%;top:calc(var(--b) + 10px);width:13px;height:13px;border-radius:50%;transform:translateX(-50%);box-shadow:0 0 0 2px #15161b}
+.land .island{left:calc(var(--b) + 11px);top:50%;width:28px;height:96px;transform:translateY(-50%)}
+.land .notch{left:var(--b);top:50%;width:28px;height:150px;border-radius:0 18px 18px 0;transform:translateY(-50%)}
+.land .punch{left:calc(var(--b) + 10px);top:50%;transform:translateY(-50%)}
+.gloss{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:4;background:linear-gradient(115deg,rgba(255,255,255,.08),transparent 32%)}
+.k{position:absolute;background:var(--m);border-radius:2px;box-shadow:inset 0 0 2px rgba(0,0,0,.5)}
+.k1{left:-10px;top:17%;width:4px;height:7%}
+.k2{left:-10px;top:26%;width:4px;height:7%}
+.k3{right:-10px;top:22%;width:4px;height:11%}
+.land .k1{left:17%;top:-10px;height:4px;width:7%}
+.land .k2{left:26%;top:-10px;height:4px;width:7%}
+.land .k3{right:auto;left:22%;top:auto;bottom:-10px;height:4px;width:11%}
+#pw{perspective:2600px}
+#rig{position:absolute;left:50%;top:50%;display:flex;align-items:flex-end;gap:90px;width:max-content;transform-style:preserve-3d;pointer-events:none;transition:transform .25s}
+body.spin #rig{transition:none}
+.m-phone .laptop,.m-pc .phone{display:none}
+.phone{transform:translate(var(--tx,0px),var(--ty,0px)) translateZ(14px) scale(var(--k,1));transform-origin:50% 100%;margin:0 var(--mx,0px)}
+.sl{position:absolute;inset:0;border-radius:inherit;background:var(--m);box-shadow:0 0 0 5px var(--m);pointer-events:none}
+.lsl{background:#8a8e98;box-shadow:0 0 0 4px #8a8e98}
+.bsl{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(#bfc3cb,#868a94);pointer-events:none}
+.screen,.cam,.gloss,.lscreen,.lcam{backface-visibility:hidden}
+button.on{background:var(--ac);color:#17142a;border-color:var(--ac)}
+.back{position:absolute;inset:0;border-radius:inherit;transform:rotateY(180deg) translateZ(30px);backface-visibility:hidden;background:linear-gradient(145deg,var(--m),#16171b 130%);box-shadow:0 0 0 1px rgba(255,255,255,.3),0 0 0 5px var(--m)}
+.back::after{content:"";position:absolute;top:3.5%;left:7%;width:36%;height:14%;border-radius:24%;background:radial-gradient(circle at 28% 30%,#0b0b0e 0 11%,#666 12% 14%,transparent 15%),radial-gradient(circle at 72% 30%,#0b0b0e 0 11%,#666 12% 14%,transparent 15%),radial-gradient(circle at 28% 74%,#0b0b0e 0 11%,#666 12% 14%,transparent 15%),rgba(0,0,0,.4)}
+.laptop{position:relative;flex:none;width:1480px;transform:translate(var(--lx,0px),var(--ly,0px));transform-style:preserve-3d;pointer-events:none}
+.lid,.lbase{pointer-events:auto}
+.lid{position:relative;transform:translateZ(-52px);margin:0 auto;width:1316px;height:836px;padding:18px;border-radius:22px 22px 6px 6px;background:#0a0a0c;transform-style:preserve-3d;box-shadow:0 0 0 1px rgba(255,255,255,.28),0 0 0 4px #8a8e98,0 0 0 5px rgba(0,0,0,.5)}
+.lscreen{position:relative;width:1280px;height:800px;overflow:hidden;border-radius:4px;background:#fff}
+.lcam{position:absolute;top:7px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#1d2030;z-index:3}
+.lback{position:absolute;inset:0;border-radius:inherit;transform:rotateY(180deg) translateZ(18px);backface-visibility:hidden;background:linear-gradient(145deg,#a3a7b1,#5b5e67);box-shadow:0 0 0 1px rgba(255,255,255,.3),0 0 0 4px #8a8e98}
+.lback::after{content:"";position:absolute;left:50%;top:50%;width:110px;height:110px;margin:-55px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.35),rgba(255,255,255,.05))}
+.lbase{position:relative;transform-style:preserve-3d;height:24px;margin-top:5px;border-radius:2px 2px 28px 28px/2px 2px 20px 20px;background:linear-gradient(#d4d7de,#8f939d);box-shadow:0 40px 70px -10px rgba(0,0,0,.55),inset 0 1px 0 #fff}
+.lbase::after{content:"";position:absolute;left:50%;top:0;width:200px;height:8px;margin-left:-100px;border-radius:0 0 10px 10px;background:#7b7f89}
+.back,.lback{pointer-events:none}
+#exit{position:fixed;top:14px;right:14px;z-index:50;display:none;opacity:.3;background:rgba(20,20,26,.7);backdrop-filter:blur(6px)}
+#exit:hover{opacity:1}
+#toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#23262f;border:1px solid var(--line);padding:9px 16px;border-radius:999px;transition:.3s;z-index:60}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+body.pres{grid-template-rows:1fr}
+body.pres .top,body.pres aside{display:none}
+body.pres .main{grid-template-columns:1fr}
+body.pres #stageWrap{background:#000;place-items:center}
+body.pres #stage{aspect-ratio:9/16;height:min(100vh,calc(100vw*16/9));cursor:default;animation:pin .6s ease}
+body.pres #exit{display:inline-flex}
+body.pres.idle #exit{opacity:0;pointer-events:none}
+body.pres.idle{cursor:none}
+@keyframes pin{from{opacity:0;transform:scale(.97)}}
+@media(max-width:1000px){.main{grid-template-columns:290px 1fr}.brand span.t,.top .lb{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><i class="logo"></i><span class="t">Web Device Studio</span></div>
+  <form class="addr" id="addr">
+    <svg class="i" viewBox="0 0 24 24"><path d="M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3"/></svg>
+    <input id="url" type="text" placeholder="Pega el enlace de tu invitación" autocomplete="off" spellcheck="false" aria-label="Dirección de la página">
+    <i class="spin"></i>
+    <button class="pri" type="submit">Cargar</button>
+  </form>
+  <div class="topr">
+    <button id="fs" data-i="fit" title="Pantalla completa (F)"><span class="lb">Pantalla completa</span></button>
+    <button id="pres" class="pri" data-i="play" title="Modo presentación (P)">Modo presentación</button>
+  </div>
+</header>
+<div class="main">
+<aside>
+  <div class="c"><h3>Página</h3>
+    <div class="row">
+      <button id="reload" data-i="reload">Recargar</button>
+      <button id="last" data-i="reload">Último enlace</button>
+      <button id="open" data-i="ext">Abrir en pestaña</button>
+      <button id="copy" data-i="copy">Copiar URL</button>
+    </div>
+    <p class="note">Si la pantalla del celular se ve en blanco, el sitio no permite mostrarse dentro de un iframe. Tus invitaciones en Vercel sí lo permiten por defecto.</p>
+  </div>
+  <div class="c"><h3>Qué mostrar</h3><div class="chips" id="modes"><button data-m="phone">Celular</button><button data-m="both">Celular + PC</button><button data-m="pc">Solo PC</button></div><label class="note" style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="prx"> Sincronizar automáticamente (usa /api/proxy en Vercel)</label><p class="note" id="prxm" style="display:none;color:#f5a3a3;margin:0 0 10px"></p><button id="snip" data-i="copy">Copiar código de sincronización</button><p class="note">En «Celular + PC» ambos cargan la página. Para que al hacer scroll en uno se mueva el otro, pega ese código al final de tu invitación (antes de &lt;/body&gt;). Con él, al deslizar en uno el otro lo sigue. Solo se sincroniza el deslizamiento, no los clics.</p><p class="note" id="syn"></p><p class="note" id="mv" style="display:none">Arrastra el celular (por su marco o la barrita de abajo) o la PC (por su marco o base) para moverlos por separado. Arrastra el fondo para moverlos juntos.</p></div>
+  <div class="c"><h3>Dispositivo</h3><select id="dev" aria-label="Modelo de celular"></select></div>
+  <div class="c"><h3>Fondo</h3>
+    <div class="chips" id="cats"></div>
+    <div class="grid" id="thumbs"></div>
+    <div class="row"><button id="upl" data-i="up">Subir foto</button><button id="nobg" data-i="x">Quitar fondo</button></div>
+    <input type="file" id="file" accept="image/*" hidden>
+    <label class="s">Desenfoque<input type="range" id="blur" min="0" max="30"><span></span></label>
+    <label class="s">Brillo<input type="range" id="br" min="40" max="140"><span></span></label>
+    <label class="s">Zoom<input type="range" id="bz" min="100" max="250"><span></span></label>
+    <label class="s">Posición X<input type="range" id="bx" min="-12" max="12"><span></span></label>
+    <label class="s">Posición Y<input type="range" id="by" min="-12" max="12"><span></span></label>
+  </div>
+  <div class="c"><h3>Vista del celular <span id="zv" style="color:var(--mut);font-weight:400"></span></h3>
+    <div class="row">
+      <button id="zo" data-i="min" title="Alejar (−)"></button>
+      <button id="zi" data-i="plus" title="Acercar (+)"></button>
+      <button id="z1" title="Tamaño real">1:1</button>
+      <button id="fit" data-i="fit" title="Ajustar (0)">Ajustar</button>
+      <button id="rot" data-i="rot" title="Girar (R)">Girar</button>
+      <button id="ctr" data-i="ctr" title="Centrar (C)">Centrar</button>
+    </div>
+    <label class="note" style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:12px 0 0"><input type="checkbox" id="hsb"> Ocultar barra de desplazamiento</label>
+    <p class="note">Arrastra el fondo para mover el celular. Atajos: P presentación, F pantalla completa, + − zoom, 0 ajustar, R girar, C centrar.</p>
+  </div>
+  <div class="c"><h3>Giro 3D</h3>
+    <label class="s">Giro<input type="range" id="ry" min="-180" max="180"><span></span></label>
+    <label class="s">Inclinación<input type="range" id="rx" min="-40" max="40"><span></span></label>
+    <div class="row"><button id="spin" data-i="rot">Giro automático</button><button id="face" data-i="ctr">De frente</button></div>
+    <p class="note">La página sigue activa mientras giras. Atajo: G.</p></div>
+  <div class="c"><button id="reset" data-i="trash">Restablecer configuración</button></div>
+</aside>
+<div id="stageWrap"><div id="stage"><div id="bg"></div>
+  <div id="pw"><div id="rig" class="m-phone"><div class="phone" id="phone"><i class="back"></i>
+    <i class="k k1"></i><i class="k k2"></i><i class="k k3"></i>
+    <div class="screen" id="screen"><iframe id="fr" title="Página" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation" allow="clipboard-write; autoplay"></iframe><div class="ov" id="ov"></div></div>
+    <i class="cam" id="cam"></i><i class="gloss"></i><i class="grip" title="Arrastra para mover solo el celular"></i>
+  </div><div class="laptop" id="laptop"><div class="lid"><div class="lscreen" id="lscreen"><iframe id="fr2" title="Página en PC" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation" allow="clipboard-write; autoplay"></iframe><div class="ov" id="ov2"></div></div><i class="lcam"></i><i class="lback"></i></div><div class="lbase"></div></div></div></div>
+</div></div>
+</div>
+<button id="exit" data-i="x">Salir</button>
+<div id="toast" role="status"></div>
+<script>
+(()=>{
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const IC={reload:"M4 12a8 8 0 0 1 14-5.3M20 4v5h-5M20 12a8 8 0 0 1-14 5.3M4 20v-5h5",plus:"M12 5v14M5 12h14",min:"M5 12h14",fit:"M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",rot:"M5 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM17 8l4 4-4 4",ctr:"M12 3v4M12 17v4M3 12h4M17 12h4M12 12h.01",ext:"M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5",copy:"M9 9h10v11H9zM5 15V4h10",play:"M7 4l13 8-13 8z",up:"M12 16V4M7 9l5-5 5 5M4 20h16",trash:"M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",x:"M6 6l12 12M18 6L6 18"};
+$$('[data-i]').forEach(b=>b.insertAdjacentHTML('afterbegin',`<svg class="i" viewBox="0 0 24 24"><path d="${IC[b.dataset.i]}"/></svg>`));
+
+// Dispositivos: id, nombre, grupo, ancho, alto (px CSS de pantalla), radio, bisel, color del marco, cámara
+const DEV=[
+['iphone16pro','iPhone 16 Pro','Apple',402,874,55,12,'#8c877f','island'],
+['iphone16promax','iPhone 16 Pro Max','Apple',440,956,60,12,'#8c877f','island'],
+['iphone15pro','iPhone 15 Pro','Apple',393,852,55,12,'#6f7377','island'],
+['iphone15promax','iPhone 15 Pro Max','Apple',430,932,58,12,'#6f7377','island'],
+['iphone14','iPhone 14','Apple',390,844,47,12,'#2b3a55','notch'],
+['s25u','Galaxy S25 Ultra','Samsung',412,915,26,8,'#5d6166','punch'],
+['s24u','Galaxy S24 Ultra','Samsung',412,915,24,8,'#8b8579','punch'],
+['s24','Galaxy S24','Samsung',360,780,38,9,'#3a3e45','punch'],
+['a55','Galaxy A55','Samsung',384,832,32,10,'#4b4f6b','punch'],
+['pixel9pro','Google Pixel 9 Pro','Otros',412,892,44,10,'#b8b2a7','punch'],
+['android','Android estándar','Otros',360,800,32,11,'#2a2c31','punch'],
+['androidc','Android compacto','Otros',320,640,26,12,'#2a2c31','punch']
+].map(([id,n,g,w,h,r,b,m,t])=>({id,n,g,w,h,r,b,m,t}));
+
+// Fondos: degradados por temática (4 variantes cada una)
+const mk=([a,b,d])=>[`linear-gradient(135deg,${a},${b})`,
+`radial-gradient(60% 50% at 15% 15%,${d},transparent),radial-gradient(70% 60% at 85% 85%,${b},transparent),${a}`,
+`radial-gradient(circle at 20% 30%,${d}cc 0 6%,transparent 7%),radial-gradient(circle at 70% 20%,${b}aa 0 9%,transparent 10%),radial-gradient(circle at 80% 70%,${d}bb 0 5%,transparent 6%),radial-gradient(circle at 30% 80%,${b}99 0 11%,transparent 12%),linear-gradient(160deg,${a},${b})`,
+`linear-gradient(180deg,${d},${a} 55%,${b})`];
+const CATS=[['Quinceañeras',['#f3b6d6','#9b6bd6','#ffe6f2']],['Bodas',['#efe4d6','#c9a98a','#fffaf2']],['Baby shower',['#bfe3f2','#f5c9d8','#f3fbf7']],['Revelación',['#f6b8cf','#9fd0f0','#fff1f6']],['Bautizos',['#dcecf8','#8fb8de','#ffffff']],['Aniversarios',['#5a1f33','#c7a45a','#f1e2c6']],['Cumpleaños',['#ffb347','#ff5e9a','#fff1a8']],['Elegantes',['#24262d','#8a8f9c','#d9d6cf']]].map(([n,p])=>({n,v:mk(p)}));
+
+const K='wds.v1',D={prx:false,mode:'phone',rx:0,ry:0,hsb:true,url:'',dev:'iphone16pro',land:false,cat:0,idx:0,img:false,none:false,blur:0,br:100,bz:100,bx:0,by:0,zoom:1,px:0,py:0,pdx:0,pdy:0,ldx:0,ldy:0};
+let S={...D},IMG=null,last='';
+try{Object.assign(S,JSON.parse(localStorage.getItem(K)||'{}'));IMG=localStorage.getItem(K+'i')}catch{}
+if(!IMG)S.img=false;
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch{}};
+const cur=()=>DEV.find(d=>d.id===S.dev)||DEV[0];
+let tt;const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2200)};
+const enter=()=>{const p=$('#pw');p.classList.remove('in');void p.offsetWidth;p.classList.add('in')};
+
+// ---- Dispositivo ----
+$('#dev').innerHTML=['Apple','Samsung','Otros'].map(g=>`<optgroup label="${g}">${DEV.filter(d=>d.g===g).map(d=>`<option value="${d.id}">${d.n}</option>`).join('')}</optgroup>`).join('');
+function phone(){const d=cur(),W=S.land?d.h:d.w,H=S.land?d.w:d.h,p=$('#phone');
+ p.style.cssText=`--b:${d.b}px;--m:${d.m};width:${W+2*d.b}px;height:${H+2*d.b}px;border-radius:${d.r+d.b}px`;
+ $('#screen').style.borderRadius=d.r+'px';$('#cam').className='cam '+d.t;p.classList.toggle('land',S.land);$('#dev').value=d.id;sb();kk();fit()}
+function sb(){const t=document.createElement('div');t.style.cssText='position:absolute;top:-99px;width:100px;height:100px;overflow:scroll';document.body.appendChild(t);
+ const w=t.offsetWidth-t.clientWidth;t.remove();$('#rig').style.setProperty('--sb',(S.hsb?w:0)+'px');$('#hsb').checked=S.hsb}
+$('#hsb').onchange=e=>{S.hsb=e.target.checked;save();sb();toast(S.hsb?'Barra oculta':'Barra visible')};
+function fit(){const st=$('#stage'),r=$('#rig'),pw=r.offsetWidth+50,ph=r.offsetHeight+50;
+ const f=Math.min(st.clientWidth/pw,st.clientHeight/ph)*.94,s=f*S.zoom;
+ const b=S.mode==='both';[['--tx',S.pdx],['--ty',S.pdy],['--lx',S.ldx],['--ly',S.ldy]].forEach(([n,v])=>r.style.setProperty(n,(b?v:0)+'px'));
+ r.style.transform=`translate(-50%,-50%) translate(${S.px}px,${S.py}px) rotateX(${S.rx}deg) rotateY(${S.ry}deg) scale(${s})`;
+ $('#zv').textContent=Math.round(s*100)+'%';fit.f=f;fit.s=s}
+if(window.ResizeObserver){const ro=new ResizeObserver(()=>fit());ro.observe($('#stage'));ro.observe($('#rig'))}
+const home=()=>{S.px=S.py=S.pdx=S.pdy=S.ldx=S.ldy=0};
+const zoom=z=>{S.zoom=Math.min(2.5,Math.max(.3,z));fit();save()};
+
+// ---- Fondo ----
+function bgr(){const e=$('#bg');
+ e.style.background=S.none?'#0d0e12':S.img&&IMG?`center/cover url("${IMG}")`:CATS[S.cat].v[S.idx];
+ e.style.filter=`blur(${S.blur}px) brightness(${S.br}%)`;
+ e.style.transform=`translate(${S.bx}%,${S.by}%) scale(${S.bz/100})`;
+ $$('#cats button').forEach((b,i)=>b.classList.toggle('on',i===S.cat));
+ $$('#thumbs button').forEach((b,i)=>b.classList.toggle('on',!S.none&&!S.img&&i===S.idx));
+ [['blur',S.blur,'px'],['br',S.br,'%'],['bz',S.bz,'%'],['bx',S.bx,''],['by',S.by,'']].forEach(([id,v,u])=>{const i=$('#'+id);i.value=v;i.nextElementSibling.textContent=v+u})}
+function thumbs(){$('#thumbs').innerHTML=CATS[S.cat].v.map((v,i)=>`<button class="th" style="background:${v}" data-i="${i}" aria-label="Fondo ${i+1}"></button>`).join('')}
+$('#cats').innerHTML=CATS.map((c,i)=>`<button data-c="${i}">${c.n}</button>`).join('');
+$('#cats').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.cat=+b.dataset.c;S.idx=0;S.img=false;S.none=false;thumbs();bgr();save()};
+$('#thumbs').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.idx=+b.dataset.i;S.img=false;S.none=false;bgr();save()};
+[['blur','blur'],['br','br'],['bz','bz'],['bx','bx'],['by','by']].forEach(([id,k])=>$('#'+id).oninput=e=>{S[k]=+e.target.value;bgr();save()});
+$('#nobg').onclick=()=>{S.none=true;bgr();save()};
+$('#upl').onclick=()=>$('#file').click();
+$('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image(),u=URL.createObjectURL(f);
+ im.onload=()=>{const m=1920,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);IMG=c.toDataURL('image/jpeg',.85);URL.revokeObjectURL(u);
+  S.img=true;S.none=false;bgr();
+  try{localStorage.setItem(K+'i',IMG);toast('Foto aplicada y guardada')}catch{toast('Foto aplicada. No cabe en el almacenamiento del navegador: no se recordará al cerrar.')}save()};
+ im.onerror=()=>toast('No se pudo leer esa imagen');im.src=u;e.target.value=''};
+
+// ---- Página ----
+function norm(u){u=u.trim();if(!u)throw'Pega primero el enlace de la página.';if(!/^[a-z][a-z0-9+.-]*:/i.test(u))u='https://'+u;
+ let x;try{x=new URL(u)}catch{throw'Ese enlace no parece válido. Ejemplo: https://misinvitaciones.vercel.app/quinceanero'}
+ if(!/^https?:$/.test(x.protocol))throw'Solo se pueden cargar enlaces http o https.';
+ if(!x.hostname.includes('.')&&x.hostname!=='localhost')throw'La dirección está incompleta. Revisa el dominio.';return x.href}
+const ov=(t,m,btn)=>['#ov','#ov2'].forEach(id=>{const o=$(id);o.classList.remove('h');o.innerHTML=`<b>${t}</b><span>${m}</span>${btn?'<button class="ovo">Abrir en pestaña nueva</button>':''}`;const b=o.querySelector('.ovo');if(b)b.onclick=()=>window.open(S.url,'_blank','noopener')});
+const busy=v=>{document.body.classList.toggle('busy',v);$('#screen').classList.toggle('busy',v);$('#lscreen').classList.toggle('busy',v)};
+let to;
+function load(raw){let u;try{u=norm(raw)}catch(e){ov('Revisa el enlace',e);return toast(e)}
+ syn.a=syn.b=0;setTimeout(synUI,6000);if(S.url&&S.url!==u)last=S.url;S.url=u;$('#url').value=u;save();busy(true);clearTimeout(to);
+ $('#fr').src=S.mode==='pc'?'about:blank':fsrc(u);$('#fr2').src=S.mode==='phone'?'about:blank':fsrc(u);to=setTimeout(()=>{busy(false);ov('La página tarda demasiado','No respondió a tiempo. Puede estar bloqueando la inserción en iframe o no estar disponible. Ábrela en una pestaña nueva para comprobarla.',1)},15000)}
+[['#fr','#ov'],['#fr2','#ov2']].forEach(([f,o])=>$(f).onload=()=>{const a=$(f).getAttribute('src');if(!a||a==='about:blank')return;clearTimeout(to);busy(false);$(o).classList.add('h')});
+$('#addr').onsubmit=e=>{e.preventDefault();load($('#url').value)};
+$('#reload').onclick=()=>{if(!S.url)return toast('Aún no hay una página cargada');busy(true);$('#fr').src='about:blank';$('#fr2').src='about:blank';setTimeout(()=>load(S.url),60)};
+$('#last').onclick=()=>{const u=last||S.url;if(!u)return toast('Todavía no hay un enlace guardado');load(u)};
+$('#open').onclick=()=>S.url?window.open(S.url,'_blank','noopener'):toast('Primero carga un enlace');
+$('#copy').onclick=async()=>{if(!S.url)return toast('Primero carga un enlace');try{await navigator.clipboard.writeText(S.url);toast('URL copiada')}catch{$('#url').select();document.execCommand('copy');toast('URL copiada')}};
+
+// ---- Vista ----
+$('#dev').onchange=e=>{S.dev=e.target.value;save();enter();phone()};
+$('#zi').onclick=()=>zoom(S.zoom*1.1);$('#zo').onclick=()=>zoom(S.zoom/1.1);
+$('#z1').onclick=()=>zoom(1/fit.f);
+$('#fit').onclick=()=>{home();zoom(1)};
+$('#ctr').onclick=()=>{home();fit();save()};
+$('#rot').onclick=()=>{S.land=!S.land;home();save();enter();phone()};
+$('#reset').onclick=()=>{if(!confirm('¿Restablecer toda la configuración y borrar la foto guardada?'))return;try{localStorage.removeItem(K);localStorage.removeItem(K+'i')}catch{}location.reload()};
+let dr=null;const st=$('#stage');
+st.onpointerdown=e=>{if(e.target.closest('.screen'))return;const t=S.mode!=='both'?null:e.target.closest('#phone')?'p':e.target.closest('#laptop')?'l':null;dr={t,x:e.clientX,y:e.clientY,px:S.px,py:S.py,pdx:S.pdx,pdy:S.pdy,ldx:S.ldx,ldy:S.ldy};st.setPointerCapture(e.pointerId);st.classList.add('drag')};
+st.onpointermove=e=>{if(!dr)return;const dx=e.clientX-dr.x,dy=e.clientY-dr.y,k=fit.s||1;
+ if(dr.t==='p'){S.pdx=dr.pdx+dx/k;S.pdy=dr.pdy+dy/k}else if(dr.t==='l'){S.ldx=dr.ldx+dx/k;S.ldy=dr.ldy+dy/k}else{S.px=dr.px+dx;S.py=dr.py+dy}fit()};
+st.onpointerup=()=>{if(dr){dr=null;st.classList.remove('drag');save()}};
+new ResizeObserver(fit).observe(st);
+
+// ---- Presentación y pantalla completa ----
+let it;const idle=()=>{document.body.classList.remove('idle');clearTimeout(it);if(document.body.classList.contains('pres'))it=setTimeout(()=>document.body.classList.add('idle'),2500)};
+function pres(on){document.body.classList.toggle('pres',on);document.body.classList.remove('idle');idle();enter();requestAnimationFrame(fit)}
+const fs=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.().catch(()=>toast('Tu navegador no permitió la pantalla completa'));
+$('#pres').onclick=()=>pres(true);$('#exit').onclick=()=>pres(false);$('#fs').onclick=fs;
+document.addEventListener('mousemove',idle);
+document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;
+ if(e.key==='Escape'&&document.body.classList.contains('pres'))return pres(false);
+ if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&e.target.type!=='range')return;
+ const k=e.key.toLowerCase();
+ if(k==='p')pres(!document.body.classList.contains('pres'));else if(k==='f')fs();
+ else if(k==='+'||k==='=')$('#zi').click();else if(k==='-')$('#zo').click();
+ else if(k==='0')$('#fit').click();else if(k==='r')$('#rot').click();else if(k==='c')$('#ctr').click();else if(k==='g')$('#spin').click()});
+
+// ---- Modos, giro 3D y sincronía ----
+function kk(){const d=cur(),k=S.mode==='both'?.72:1,W=(S.land?d.h:d.w)+2*d.b+12,r=$('#rig');r.style.setProperty('--k',k);r.style.setProperty('--mx',(-(W*(1-k)/2))+'px')}
+const mkSl=(el,c,n,st)=>{for(let i=1;i<=n;i++){const e=document.createElement('i');e.className=c;e.style.transform=`translateZ(${-i*st}px)`;el.insertBefore(e,el.firstChild)}};
+function fsrc(u){return S.prx&&S.mode==='both'?'/api/proxy?url='+encodeURIComponent(u):u}
+async function prxOK(){try{const r=await fetch('/api/proxy?ping=1',{cache:'no-store'});return r.ok&&(await r.text()).trim()==='ok'}catch{return false}}
+function prxOff(){S.prx=false;$('#prx').checked=false;save();const m=$('#prxm');m.style.display='';m.textContent='No encontré api/proxy.js en tu Vercel. Súbelo a GitHub (carpeta api, junto a index.html) y espera el despliegue, o pega el código de sincronización en tu invitación.'}
+$('#prx').onchange=async e=>{const m=$('#prxm');m.style.display='none';if(e.target.checked&&!(await prxOK())){prxOff();return}S.prx=e.target.checked;save();if(S.url)load(S.url)};
+if(S.prx)prxOK().then(ok=>{if(!ok){prxOff();if(S.url)load(S.url)}});
+function mode(){$('#rig').className='m-'+S.mode;$$('#modes button').forEach(b=>b.classList.toggle('on',b.dataset.m===S.mode));$('#mv').style.display=S.mode==='both'?'':'none';kk();fit()}
+$('#modes').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.mode=b.dataset.m;save();enter();mode();synUI();if(S.url)load(S.url)};
+['ry','rx'].forEach(k=>$('#'+k).oninput=e=>{S[k]=+e.target.value;e.target.nextElementSibling.textContent=e.target.value+'°';fit();save()});
+$('#face').onclick=()=>{S.rx=S.ry=0;$('#ry').value=$('#rx').value=0;fit();save()};
+let sp=false;function spin(){if(!sp)return;S.ry=((S.ry+180+.5)%360)-180;$('#ry').value=S.ry;fit();requestAnimationFrame(spin)}
+$('#spin').onclick=()=>{sp=!sp;document.body.classList.toggle('spin',sp);$('#spin').classList.toggle('on',sp);if(sp)spin();else save()};
+const SNIP=`<script>
+(()=>{if(parent===window)return;let ig=0,main=null;const P=t=>parent.postMessage(t,'*');
+const H=e=>e===document||e===document.documentElement||e===document.body?(document.scrollingElement||document.documentElement):e;
+const mx=e=>e.scrollHeight-e.clientHeight;
+const find=()=>{if(main&&main.isConnected)return main;const b=document.scrollingElement||document.documentElement;if(mx(b)>20)return main=b;
+let best=null,bs=0;document.querySelectorAll('*').forEach(e=>{const o=getComputedStyle(e).overflowY;if((o==='auto'||o==='scroll')&&mx(e)>bs){bs=mx(e);best=e}});return main=best&&bs>20?best:b};
+addEventListener('scroll',e=>{if(Date.now()<ig)return;const t=H(e.target);if(mx(t)<=20)return;main=t;P({wds:'scroll',p:t.scrollTop/mx(t)})},true);
+addEventListener('message',e=>{const d=e.data;if(!d||!d.wds)return;
+if(d.wds==='scrollTo'){const t=find();ig=Date.now()+400;t.scrollTo({top:d.p*mx(t),behavior:'instant'})}
+});
+P({wds:'hello'})})();
+<\/script>`;
+$('#snip').onclick=async()=>{try{await navigator.clipboard.writeText(SNIP);toast('Código copiado. Pégalo antes de </body> en tu invitación')}catch{toast('No se pudo copiar')}};
+const syn={a:0,b:0};
+function synUI(){const el=$('#syn');if(S.mode!=='both'){el.textContent='';return}const ok=syn.a&&syn.b;el.textContent=ok?'✓ Sincronización activa: el deslizamiento se repite en ambos':syn.a||syn.b?'Conectado solo con uno de los dos. Espera a que termine de cargar.':'○ Sin conexión: tu invitación aún no tiene el código pegado, por eso no se puede sincronizar.';el.style.color=ok?'#9fe0b0':'#e8c07a'}
+addEventListener('message',e=>{const d=e.data;if(!d||!d.wds)return;const a=$('#fr').contentWindow,b=$('#fr2').contentWindow,f=e.source===a?'a':e.source===b?'b':null;if(!f)return;
+ if(d.wds==='hello'){syn[f]=1;synUI();return}
+ if(S.mode!=='both'||d.wds!=='scroll')return;(f==='a'?b:a).postMessage({wds:'scrollTo',p:d.p},'*')});
+
+// ---- Inicio ----
+mkSl($('#phone'),'sl',14,2);mkSl($('.lid'),'sl lsl',8,2);mkSl($('.lbase'),'bsl',20,3);thumbs();bgr();phone();mode();$('#prx').checked=S.prx;$('#ry').value=S.ry;$('#rx').value=S.rx;enter();
+if(S.url){$('#url').value=S.url;load(S.url)}else ov('Tu página aparecerá aquí','Pega el enlace de tu invitación arriba y pulsa Cargar.');
+})();
+</script>
+</body>
+</html>
