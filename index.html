@@ -51,6 +51,9 @@ input[type=range]{accent-color:var(--ac);width:100%}
 .phone{position:relative;flex:none;transform-style:preserve-3d;backface-visibility:hidden;pointer-events:auto;background:linear-gradient(145deg,#1c1c20,#050505);transition:width .45s cubic-bezier(.3,.8,.3,1),height .45s cubic-bezier(.3,.8,.3,1),border-radius .45s,transform .3s,margin .3s;
 box-shadow:0 0 0 1px rgba(255,255,255,.3),0 0 0 5px var(--m),0 0 0 6px rgba(0,0,0,.55),0 60px 100px -10px rgba(0,0,0,.6),0 25px 45px rgba(0,0,0,.35)}
 .drag #rig,.drag .phone{transition:none}
+#rig.flat,#rig.flat .laptop{transform-style:flat}
+#rig.flat .laptop{z-index:1}
+#rig.flat .phone{z-index:3}
 .m-both .phone,.m-both .laptop{cursor:grab}
 .drag .phone,.drag .laptop{cursor:grabbing!important}
 .grip{display:none;position:absolute;left:50%;bottom:-34px;width:96px;height:8px;margin-left:-48px;border-radius:99px;background:rgba(255,255,255,.55);box-shadow:0 2px 8px rgba(0,0,0,.45);backface-visibility:hidden}
@@ -143,7 +146,7 @@ body.pres.idle{cursor:none}
     </div>
     <p class="note">Si la pantalla del celular se ve en blanco, el sitio no permite mostrarse dentro de un iframe. Tus invitaciones en Vercel sí lo permiten por defecto.</p>
   </div>
-  <div class="c"><h3>Qué mostrar</h3><div class="chips" id="modes"><button data-m="phone">Celular</button><button data-m="both">Celular + PC</button><button data-m="pc">Solo PC</button></div><label class="note" style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="prx"> Sincronizar automáticamente (usa /api/proxy en Vercel)</label><p class="note" id="prxm" style="display:none;color:#f5a3a3;margin:0 0 10px"></p><button id="snip" data-i="copy">Copiar código de sincronización</button><p class="note">En «Celular + PC» ambos cargan la página. Para que al hacer scroll en uno se mueva el otro, pega ese código al final de tu invitación (antes de &lt;/body&gt;). Con él, al deslizar en uno el otro lo sigue. Solo se sincroniza el deslizamiento, no los clics.</p><p class="note" id="syn"></p><p class="note" id="mv" style="display:none">Arrastra el celular (por su marco o la barrita de abajo) o la PC (por su marco o base) para moverlos por separado. Arrastra el fondo para moverlos juntos.</p></div>
+  <div class="c"><h3>Qué mostrar</h3><div class="chips" id="modes"><button data-m="phone">Celular</button><button data-m="both">Celular + PC</button><button data-m="pc">Solo PC</button></div><label class="note" style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="prx"> Sincronizar automáticamente (usa /api/proxy en Vercel)</label><p class="note" id="prxm" style="display:none;color:#f5a3a3;margin:0 0 10px"></p><button id="snip" data-i="copy">Copiar código de sincronización</button><p class="note">En «Celular + PC» ambos cargan la página. Para que lo que hagas en uno se repita en el otro sin usar el proxy, pega ese código al final de tu invitación (antes de &lt;/body&gt;). Con él, lo que hagas en uno (deslizar, tocar botones, escribir) se repite en el otro.</p><p class="note" id="syn"></p><p class="note" id="mv" style="display:none">Arrastra el celular (por su marco o la barrita de abajo) o la PC (por su marco o base) para moverlos por separado. Arrastra el fondo para moverlos juntos.</p></div>
   <div class="c"><h3>Dispositivo</h3><select id="dev" aria-label="Modelo de celular"></select></div>
   <div class="c"><h3>Fondo</h3>
     <div class="chips" id="cats"></div>
@@ -234,6 +237,7 @@ $('#hsb').onchange=e=>{S.hsb=e.target.checked;save();sb();toast(S.hsb?'Barra ocu
 function fit(){const st=$('#stage'),r=$('#rig'),pw=r.offsetWidth+50,ph=r.offsetHeight+50;
  const f=Math.min(st.clientWidth/pw,st.clientHeight/ph)*.94,s=f*S.zoom;
  const b=S.mode==='both';[['--tx',S.pdx],['--ty',S.pdy],['--lx',S.ldx],['--ly',S.ldy]].forEach(([n,v])=>r.style.setProperty(n,(b?v:0)+'px'));
+ r.classList.toggle('flat',Math.abs(S.rx)<.5&&Math.abs(S.ry)<.5&&!document.body.classList.contains('spin'));
  r.style.transform=`translate(-50%,-50%) translate(${S.px}px,${S.py}px) rotateX(${S.rx}deg) rotateY(${S.ry}deg) scale(${s})`;
  $('#zv').textContent=Math.round(s*100)+'%';fit.f=f;fit.s=s}
 if(window.ResizeObserver){const ro=new ResizeObserver(()=>fit());ro.observe($('#stage'));ro.observe($('#rig'))}
@@ -325,22 +329,34 @@ let sp=false;function spin(){if(!sp)return;S.ry=((S.ry+180+.5)%360)-180;$('#ry')
 $('#spin').onclick=()=>{sp=!sp;document.body.classList.toggle('spin',sp);$('#spin').classList.toggle('on',sp);if(sp)spin();else save()};
 const SNIP=`<script>
 (()=>{if(parent===window)return;let ig=0,main=null;const P=t=>parent.postMessage(t,'*');
+try{let fe=null;const fire=t=>{['fullscreenchange','webkitfullscreenchange'].forEach(n=>{try{(t&&t.isConnected?t:document).dispatchEvent(new Event(n,{bubbles:true}))}catch(_){}})};
+const rq=function(){const t=this;fe=t;setTimeout(()=>fire(t),0);return Promise.resolve()};
+const ex=function(){const t=fe;fe=null;setTimeout(()=>fire(t),0);return Promise.resolve()};
+['requestFullscreen','webkitRequestFullscreen','webkitRequestFullScreen','mozRequestFullScreen','msRequestFullscreen'].forEach(n=>{Element.prototype[n]=rq});
+['exitFullscreen','webkitExitFullscreen','webkitCancelFullScreen','mozCancelFullScreen','msExitFullscreen'].forEach(n=>{Document.prototype[n]=ex});
+['fullscreenElement','webkitFullscreenElement','webkitCurrentFullScreenElement','mozFullScreenElement','msFullscreenElement'].forEach(n=>Object.defineProperty(Document.prototype,n,{configurable:true,get:()=>fe}));
+['fullscreenEnabled','webkitFullscreenEnabled'].forEach(n=>Object.defineProperty(Document.prototype,n,{configurable:true,get:()=>true}))}catch(_){}
 const H=e=>e===document||e===document.documentElement||e===document.body?(document.scrollingElement||document.documentElement):e;
 const mx=e=>e.scrollHeight-e.clientHeight;
 const find=()=>{if(main&&main.isConnected)return main;const b=document.scrollingElement||document.documentElement;if(mx(b)>20)return main=b;
 let best=null,bs=0;document.querySelectorAll('*').forEach(e=>{const o=getComputedStyle(e).overflowY;if((o==='auto'||o==='scroll')&&mx(e)>bs){bs=mx(e);best=e}});return main=best&&bs>20?best:b};
+const path=e=>{const a=[];while(e&&e!==document.documentElement){const p=e.parentNode;if(!p)return null;a.unshift([].indexOf.call(p.children,e));e=p}return a};
+const get=a=>{let e=document.documentElement;for(const i of a)e=e&&e.children[i];return e};
 addEventListener('scroll',e=>{if(Date.now()<ig)return;const t=H(e.target);if(mx(t)<=20)return;main=t;P({wds:'scroll',p:t.scrollTop/mx(t)})},true);
+addEventListener('click',e=>{if(e.isTrusted){const a=path(e.target);if(a)P({wds:'click',a})}},true);
+['input','change'].forEach(n=>addEventListener(n,e=>{if(e.isTrusted){const a=path(e.target);if(a)P({wds:'input',a,v:e.target.value,c:e.target.checked})}},true));
 addEventListener('message',e=>{const d=e.data;if(!d||!d.wds)return;
 if(d.wds==='scrollTo'){const t=find();ig=Date.now()+400;t.scrollTo({top:d.p*mx(t),behavior:'instant'})}
-});
+else if(d.wds==='click'){const t=get(d.a);if(t){ig=Date.now()+900;t.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}))}}
+else if(d.wds==='input'){const t=get(d.a);if(t){if(t.value!==d.v)t.value=d.v;if('checked' in t&&d.c!==undefined)t.checked=d.c;t.dispatchEvent(new Event('input',{bubbles:true}));t.dispatchEvent(new Event('change',{bubbles:true}))}}});
 P({wds:'hello'})})();
 <\/script>`;
 $('#snip').onclick=async()=>{try{await navigator.clipboard.writeText(SNIP);toast('Código copiado. Pégalo antes de </body> en tu invitación')}catch{toast('No se pudo copiar')}};
 const syn={a:0,b:0};
-function synUI(){const el=$('#syn');if(S.mode!=='both'){el.textContent='';return}const ok=syn.a&&syn.b;el.textContent=ok?'✓ Sincronización activa: el deslizamiento se repite en ambos':syn.a||syn.b?'Conectado solo con uno de los dos. Espera a que termine de cargar.':'○ Sin conexión: tu invitación aún no tiene el código pegado, por eso no se puede sincronizar.';el.style.color=ok?'#9fe0b0':'#e8c07a'}
+function synUI(){const el=$('#syn');if(S.mode!=='both'){el.textContent='';return}const ok=syn.a&&syn.b;el.textContent=ok?'✓ Sincronización activa: deslizar, tocar y escribir se repiten en ambos':syn.a||syn.b?'Conectado solo con uno de los dos. Espera a que termine de cargar.':'○ Sin conexión: tu invitación aún no tiene el código pegado, por eso no se puede sincronizar.';el.style.color=ok?'#9fe0b0':'#e8c07a'}
 addEventListener('message',e=>{const d=e.data;if(!d||!d.wds)return;const a=$('#fr').contentWindow,b=$('#fr2').contentWindow,f=e.source===a?'a':e.source===b?'b':null;if(!f)return;
  if(d.wds==='hello'){syn[f]=1;synUI();return}
- if(S.mode!=='both'||d.wds!=='scroll')return;(f==='a'?b:a).postMessage({wds:'scrollTo',p:d.p},'*')});
+ if(S.mode!=='both')return;const o=f==='a'?b:a;if(d.wds==='scroll')o.postMessage({wds:'scrollTo',p:d.p},'*');else if(d.wds==='click'||d.wds==='input')o.postMessage(d,'*')});
 
 // ---- Inicio ----
 mkSl($('#phone'),'sl',14,2);mkSl($('.lid'),'sl lsl',8,2);mkSl($('.lbase'),'bsl',20,3);thumbs();bgr();phone();mode();$('#prx').checked=S.prx;$('#ry').value=S.ry;$('#rx').value=S.rx;enter();
