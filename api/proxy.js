@@ -12,15 +12,39 @@ const net = require('net');
 
 const SNIP = `<script>
 (()=>{if(parent===window)return;let ig=0,main=null;const P=t=>parent.postMessage(t,'*');
+try{let fe=null;const fire=t=>{['fullscreenchange','webkitfullscreenchange'].forEach(n=>{try{(t&&t.isConnected?t:document).dispatchEvent(new Event(n,{bubbles:true}))}catch(_){}})};
+const rq=function(){const t=this;fe=t;setTimeout(()=>fire(t),0);return Promise.resolve()};
+const ex=function(){const t=fe;fe=null;setTimeout(()=>fire(t),0);return Promise.resolve()};
+['requestFullscreen','webkitRequestFullscreen','webkitRequestFullScreen','mozRequestFullScreen','msRequestFullscreen'].forEach(n=>{Element.prototype[n]=rq});
+['exitFullscreen','webkitExitFullscreen','webkitCancelFullScreen','mozCancelFullScreen','msExitFullscreen'].forEach(n=>{Document.prototype[n]=ex});
+['fullscreenElement','webkitFullscreenElement','webkitCurrentFullScreenElement','mozFullScreenElement','msFullscreenElement'].forEach(n=>Object.defineProperty(Document.prototype,n,{configurable:true,get:()=>fe}));
+['fullscreenEnabled','webkitFullscreenEnabled'].forEach(n=>Object.defineProperty(Document.prototype,n,{configurable:true,get:()=>true}))}catch(_){}
 const H=e=>e===document||e===document.documentElement||e===document.body?(document.scrollingElement||document.documentElement):e;
 const mx=e=>e.scrollHeight-e.clientHeight;
 const find=()=>{if(main&&main.isConnected)return main;const b=document.scrollingElement||document.documentElement;if(mx(b)>20)return main=b;
 let best=null,bs=0;document.querySelectorAll('*').forEach(e=>{const o=getComputedStyle(e).overflowY;if((o==='auto'||o==='scroll')&&mx(e)>bs){bs=mx(e);best=e}});return main=best&&bs>20?best:b};
+const path=e=>{const a=[];while(e&&e!==document.documentElement){const p=e.parentNode;if(!p)return null;a.unshift([].indexOf.call(p.children,e));e=p}return a};
+const get=a=>{let e=document.documentElement;for(const i of a)e=e&&e.children[i];return e};
 addEventListener('scroll',e=>{if(Date.now()<ig)return;const t=H(e.target);if(mx(t)<=20)return;main=t;P({wds:'scroll',p:t.scrollTop/mx(t)})},true);
+addEventListener('click',e=>{if(e.isTrusted){const a=path(e.target);if(a)P({wds:'click',a})}},true);
+['input','change'].forEach(n=>addEventListener(n,e=>{if(e.isTrusted){const a=path(e.target);if(a)P({wds:'input',a,v:e.target.value,c:e.target.checked})}},true));
 addEventListener('message',e=>{const d=e.data;if(!d||!d.wds)return;
 if(d.wds==='scrollTo'){const t=find();ig=Date.now()+400;t.scrollTo({top:d.p*mx(t),behavior:'instant'})}
-});
+else if(d.wds==='click'){const t=get(d.a);if(t){ig=Date.now()+900;t.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}))}}
+else if(d.wds==='input'){const t=get(d.a);if(t){if(t.value!==d.v)t.value=d.v;if('checked' in t&&d.c!==undefined)t.checked=d.c;t.dispatchEvent(new Event('input',{bubbles:true}));t.dispatchEvent(new Event('change',{bubbles:true}))}}});
 P({wds:'hello'})})();
+<\/script>`;
+
+// Enlaces internos: se siguen cargando por el proxy para no perder la sincronización.
+const NAV = `<script>
+(()=>{document.addEventListener('click',e=>{
+if(e.defaultPrevented)return;const a=e.target.closest&&e.target.closest('a[href]');if(!a||a.hasAttribute('download'))return;
+const raw=a.getAttribute('href')||'';
+if(raw.charAt(0)==='#'){e.preventDefault();let id=raw.slice(1);try{id=decodeURIComponent(id)}catch(_){}const t=id?(document.getElementById(id)||document.getElementsByName(id)[0]):document.documentElement;if(t&&t.scrollIntoView)t.scrollIntoView();return}
+if(a.target==='_blank')return;let u;try{u=new URL(a.href)}catch(_){return}
+if(u.protocol!=='http:'&&u.protocol!=='https:')return;
+if(u.host!==new URL(document.baseURI).host)return;
+e.preventDefault();location.href=location.origin+'/api/proxy?url='+encodeURIComponent(u.href)});})();
 <\/script>`;
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -100,11 +124,12 @@ module.exports = async (req, res) => {
 
     html = html.replace(/<meta[^>]+http-equiv=["']?content-security-policy["']?[^>]*>/gi, '');
     const base = '<base href="' + u.href.replace(/"/g, '%22') + '">';
-    html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + base) : base + html;
+    const ins = (re) => { const m = html.match(re); if (!m) return false; const i = m.index + m[0].length; html = html.slice(0, i) + base + html.slice(i); return true; };
+    if (!ins(/<head(\s[^>]*)?>/i) && !ins(/<html(\s[^>]*)?>/i) && !ins(/^\s*<!doctype[^>]*>/i)) html = base + html;
 
     if (!html.includes("wds:'hello'")) {
       const i = html.toLowerCase().lastIndexOf('</body>');
-      html = i >= 0 ? html.slice(0, i) + SNIP + html.slice(i) : html + SNIP;
+      html = i >= 0 ? html.slice(0, i) + NAV + SNIP + html.slice(i) : html + NAV + SNIP;
     }
 
     res.statusCode = 200;
